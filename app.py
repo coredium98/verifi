@@ -11,14 +11,14 @@ import base64
 
 def _logo_b64():
     try:
-        with open("Verifi_logo.png", "rb") as f:
+        with open("Verifi logo.png", "rb") as f:
             return base64.b64encode(f.read()).decode()
     except Exception:
         return None
 
 _logo = _logo_b64()
 _logo_html = (
-    f'<img src="data:image/png;base64,{_logo}" style="height:64px; margin-right:1.2rem; vertical-align:middle; background:transparent;">'
+    f'<img src="data:image/png;base64,{_logo}" style="height:64px; margin-right:1.2rem; vertical-align:middle;">'
     if _logo else '🔍'
 )
 
@@ -175,9 +175,9 @@ col1, col2 = st.columns(2)
 with col1:
     industry = st.selectbox("Industry", list(BENCHMARKS.keys()))
     bench = BENCHMARKS[industry]
-    st.markdown(f'<div class="industry-hint"> For <b>{industry}</b>: {bench["emphasis_reason"]}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="industry-hint">📊 For <b>{industry}</b>: {bench["emphasis_reason"]}</div>', unsafe_allow_html=True)
     if bench.get("seasonal"):
-        st.markdown(f'<div class="seasonal-warn"> {bench["seasonal_note"]}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="seasonal-warn">⚠️ {bench["seasonal_note"]}</div>', unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
     objective = st.radio("Acquisition objective", ["Cash Flow", "Growth", "Asset Acquisition"], horizontal=True)
@@ -192,7 +192,7 @@ with col2:
 uploaded_file = st.file_uploader("Upload financial document (PDF or Excel)", type=["pdf","xlsx","xls"])
 st.markdown('</div>', unsafe_allow_html=True)
 
-analyze_clicked = st.button("Analyze Document", type="primary", use_container_width=True)
+analyze_clicked = st.button("🔍 Analyze Document", type="primary", use_container_width=True)
 
 # ── Analysis pipeline ─────────────────────────────────────────────────────────
 if analyze_clicked and uploaded_file:
@@ -254,9 +254,9 @@ if st.session_state.quality:
     st.subheader("Step 2 — Data Quality Assessment")
 
     c1, c2, c3 = st.columns(3)
-    c1.metric("Income Statement", "Found" if q["has_income_stmt"] else "Not found")
-    c2.metric("Balance Sheet",    "Found" if q["has_balance"]     else "Not found")
-    c3.metric("Cash Flow Data",   "Found" if q["has_cash_flow"]   else "Not found")
+    c1.metric("Income Statement", "✅ Found" if q["has_income_stmt"] else "❌ Not found")
+    c2.metric("Balance Sheet",    "✅ Found" if q["has_balance"]     else "❌ Not found")
+    c3.metric("Cash Flow Data",   "✅ Found" if q["has_cash_flow"]   else "❌ Not found")
 
     # Concrete confidence score
     all_keys = ["revenue","gross_profit","net_income","operating_cash_flow",
@@ -332,14 +332,31 @@ if st.session_state.ratios:
         desc        = meta["desc"](r)
         implication = implications.get(key, "")
 
+        # Trend label
+        if trend == "up" and key in ("dso", "revenue_receivables"):
+            trend_label = "⬆ Worsening"
+            trend_style = "color:#922b21; font-size:0.78rem; font-weight:600;"
+        elif trend == "down" and key in ("dso", "revenue_receivables"):
+            trend_label = "⬇ Improving"
+            trend_style = "color:#1a6b5a; font-size:0.78rem; font-weight:600;"
+        elif trend == "up" and key in ("gross_margin","ebitda_stability","cash_accrual","interest_coverage"):
+            trend_label = "⬆ Improving"
+            trend_style = "color:#1a6b5a; font-size:0.78rem; font-weight:600;"
+        elif trend == "down" and key in ("gross_margin","ebitda_stability","cash_accrual","interest_coverage"):
+            trend_label = "⬇ Worsening"
+            trend_style = "color:#922b21; font-size:0.78rem; font-weight:600;"
+        else:
+            trend_label = "→ Stable"
+            trend_style = "color:#7d6608; font-size:0.78rem; font-weight:600;"
+
         st.markdown(f"""
         <div class="ratio-row">
-            <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
+            <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap; margin-bottom:0.3rem;">
                 <span style="font-weight:700; min-width:230px;">{meta['label']}</span>
                 {badge}
-                <span style="font-size:1rem;" title="Trend">{trend_color} {arrow}</span>
+                <span style="{trend_style}">{trend_label}</span>
             </div>
-            <div style="color:#333; font-size:0.9rem; margin-top:0.3rem;">{desc}</div>
+            <div style="color:#333; font-size:0.9rem;">{desc}</div>
             {f'<div class="ratio-implication">→ For a {objective} buyer: {implication}</div>' if implication else ''}
         </div>
         """, unsafe_allow_html=True)
@@ -372,7 +389,7 @@ if st.session_state.report_text:
 
     st.markdown("""
     <div class="cpa-banner">
-        <h3>CPA Advisory Review</h3>
+        <h3>📋 CPA Advisory Review</h3>
         <p>Your Vérifi report has been submitted for CPA advisory review.
         A licensed Quebec CPA will provide an advisory memo within 48 hours.
         This is an advisory consultation, not an assurance engagement.</p>
@@ -381,11 +398,11 @@ if st.session_state.report_text:
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    if st.button("Schedule Included 1-Hour CPA Consultation", use_container_width=True):
+    if st.button("📅 Schedule Included 1-Hour CPA Consultation", use_container_width=True):
         st.info("Consultation scheduling coming soon. A CPA will contact you at your registered email within 24 hours.")
 
     st.download_button(
-        label="⬇Download Report",
+        label="⬇️ Download Report",
         data=st.session_state.report_text,
         file_name="verifi_due_diligence_report.txt",
         mime="text/plain",
