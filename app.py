@@ -192,7 +192,7 @@ with col2:
 uploaded_file = st.file_uploader("Upload financial document (PDF or Excel)", type=["pdf","xlsx","xls"])
 st.markdown('</div>', unsafe_allow_html=True)
 
-analyze_clicked = st.button("🔍 Analyze Document", type="primary", use_container_width=True)
+analyze_clicked = st.button("Analyze Document", type="primary", use_container_width=True)
 
 # ── Analysis pipeline ─────────────────────────────────────────────────────────
 if analyze_clicked and uploaded_file:
@@ -364,7 +364,7 @@ if st.session_state.ratios:
     st.markdown('</div>', unsafe_allow_html=True)
 
     # ── Generate report ───────────────────────────────────────────────────────
-    if st.button("📄 Generate AI Due Diligence Report", type="primary", use_container_width=True):
+    if st.button("Generate AI Due Diligence Report", type="primary", use_container_width=True):
         q = st.session_state.quality or {}
         with st.spinner("Generating report..."):
             try:
@@ -389,7 +389,7 @@ if st.session_state.report_text:
 
     st.markdown("""
     <div class="cpa-banner">
-        <h3>📋 CPA Advisory Review</h3>
+        <h3>CPA Advisory Review</h3>
         <p>Your Vérifi report has been submitted for CPA advisory review.
         A licensed Quebec CPA will provide an advisory memo within 48 hours.
         This is an advisory consultation, not an assurance engagement.</p>
@@ -398,11 +398,11 @@ if st.session_state.report_text:
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    if st.button("📅 Schedule Included 1-Hour CPA Consultation", use_container_width=True):
+    if st.button("Schedule Included 1-Hour CPA Consultation", use_container_width=True):
         st.info("Consultation scheduling coming soon. A CPA will contact you at your registered email within 24 hours.")
 
     st.download_button(
-        label="⬇️ Download Report",
+        label="⬇Download Report",
         data=st.session_state.report_text,
         file_name="verifi_due_diligence_report.txt",
         mime="text/plain",
