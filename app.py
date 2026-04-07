@@ -11,7 +11,7 @@ import base64
 
 def _logo_b64():
     try:
-        with open("Verifi logo.png", "rb") as f:
+        with open("Verifi_logo.png", "rb") as f:
             return base64.b64encode(f.read()).decode()
     except Exception:
         return None
