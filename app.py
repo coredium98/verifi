@@ -32,7 +32,6 @@ st.markdown(f"""
     --teal:   #20B2AA;
     --grey:   #4A4A4A;
     --white:  #FFFFFF;
-    --bg-alt: #F0F4F8;
     --sage:   #E8F1F0;
     --border: #D6E4F0;
 }}
@@ -60,14 +59,13 @@ st.markdown(f"""
     border-radius: 8px; padding: 0.8rem 1rem; margin-top: 0.8rem;
     font-size: 0.9rem; color: var(--navy);
 }}
-.badge-red     {{ background:#fadbd8; color:#7b241c; padding:3px 12px; border-radius:20px; font-weight:700; font-size:0.8rem; display:inline-block; cursor:help; }}
-.badge-yellow  {{ background:#fef9e7; color:#7d6608; padding:3px 12px; border-radius:20px; font-weight:700; font-size:0.8rem; display:inline-block; cursor:help; }}
-.badge-green   {{ background:var(--sage); color:#1a6b5a; padding:3px 12px; border-radius:20px; font-weight:700; font-size:0.8rem; display:inline-block; cursor:help; }}
-.badge-unknown {{ background:#eaecee; color:#555; padding:3px 12px; border-radius:20px; font-weight:700; font-size:0.8rem; display:inline-block; cursor:help; }}
+.badge-red     {{ background:#fadbd8; color:#7b241c; padding:3px 12px; border-radius:20px; font-weight:700; font-size:0.8rem; display:inline-block; position:relative; }}
+.badge-yellow  {{ background:#fef9e7; color:#7d6608; padding:3px 12px; border-radius:20px; font-weight:700; font-size:0.8rem; display:inline-block; position:relative; }}
+.badge-green   {{ background:var(--sage); color:#1a6b5a; padding:3px 12px; border-radius:20px; font-weight:700; font-size:0.8rem; display:inline-block; position:relative; }}
+.badge-unknown {{ background:#eaecee; color:#555; padding:3px 12px; border-radius:20px; font-weight:700; font-size:0.8rem; display:inline-block; position:relative; }}
 .ratio-row {{ padding: 0.9rem 0; border-bottom: 1px solid #eef2f7; }}
-.ratio-label {{ font-weight:700; cursor:help; border-bottom: 1px dashed #aaa; display:inline; }}
 .ratio-implication {{ font-size:0.83rem; color:#4A5568; font-style:italic; margin-top:0.25rem; }}
-.trend-tag {{ font-size:0.78rem; font-weight:600; cursor:help; }}
+.trend-tag {{ font-size:0.78rem; font-weight:600; position:relative; display:inline-block; }}
 .cpa-banner {{
     background: linear-gradient(135deg, #1B365D 0%, #20B2AA 100%);
     border-radius: 10px; padding: 1.5rem 2rem; color: white; margin-top: 1rem;
@@ -93,11 +91,6 @@ st.markdown(f"""
     border-radius: 8px; padding: 0.6rem 1rem;
     font-size: 0.85rem; color: #555; margin-top: 0.4rem;
 }}
-.doc-type-card {{
-    border: 1px solid var(--border); border-radius: 8px;
-    padding: 0.6rem 0.9rem; margin-bottom: 0.4rem;
-    font-size: 0.88rem; cursor: pointer;
-}}
 .footer {{
     text-align: center; font-size: 0.78rem; color: #999;
     margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #eee;
@@ -109,6 +102,48 @@ div[data-testid="stButton"] button[kind="primary"] {{
 }}
 div[data-testid="stButton"] button[kind="primary"]:hover {{
     background-color: #189e97 !important;
+}}
+
+/* ── Custom navy CSS tooltips ─────────────────────────────────── */
+.tip {{
+    position: relative;
+    display: inline-block;
+    cursor: help;
+    border-bottom: 1px dashed #999;
+}}
+.tip .tiptext {{
+    visibility: hidden;
+    opacity: 0;
+    background-color: #1B365D;
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 400;
+    line-height: 1.5;
+    text-align: left;
+    border-radius: 6px;
+    padding: 8px 12px;
+    width: 280px;
+    position: absolute;
+    z-index: 9999;
+    bottom: 130%;
+    left: 50%;
+    transform: translateX(-50%);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    transition: opacity 0.2s;
+    pointer-events: none;
+}}
+.tip .tiptext::after {{
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: #1B365D;
+}}
+.tip:hover .tiptext {{
+    visibility: visible;
+    opacity: 1;
 }}
 </style>
 
@@ -139,56 +174,79 @@ with st.expander("🔒 Privacy & Data Protection Notice (Law 25 / Quebec)"):
 By uploading a document and clicking Analyze, you consent to this processing.
     """)
 
-for key in ["data","quality","ratios","report_text","manual_mode","industry","objective"]:
+for key in ["data","quality","ratios","report_text","manual_mode","industry","objective",
+            "buyer_context","transaction_size","years_operating","financing","doc_type","years"]:
     if key not in st.session_state:
         st.session_state[key] = None
 
-# ── Tooltip definitions ───────────────────────────────────────────────────────
+# ── Tooltip helper ────────────────────────────────────────────────────────────
+def tip(label, tooltip):
+    return f'<span class="tip">{label}<span class="tiptext">{tooltip}</span></span>'
+
+BADGES = {
+    "red":     tip('🔴 HIGH RISK', 'This finding exceeds acceptable thresholds and requires investigation before proceeding with the acquisition.'),
+    "yellow":  tip('🟡 CAUTION',   'This finding is outside the normal range but not extreme. Ask the seller for an explanation before proceeding.'),
+    "green":   tip('🟢 NORMAL',    'This finding is within the expected range for this industry. No immediate concern.'),
+    "unknown": tip('⚪ INSUFFICIENT DATA', 'Not enough financial data was found to calculate this ratio reliably.'),
+}
+
+# Wrap badges in styled spans
+BADGE_STYLE = {
+    "red":     "badge-red",
+    "yellow":  "badge-yellow",
+    "green":   "badge-green",
+    "unknown": "badge-unknown",
+}
+
+def badge_html(sev):
+    labels = {
+        "red":     ("🔴 HIGH RISK",        "This finding exceeds acceptable thresholds and requires investigation before proceeding."),
+        "yellow":  ("🟡 CAUTION",           "This finding is outside the normal range. Ask the seller for an explanation."),
+        "green":   ("🟢 NORMAL",            "This finding is within the expected range for this industry."),
+        "unknown": ("⚪ INSUFFICIENT DATA", "Not enough data was found to calculate this ratio reliably."),
+    }
+    cls = BADGE_STYLE.get(sev, "badge-unknown")
+    label, tooltip = labels.get(sev, labels["unknown"])
+    return f'<span class="{cls} tip">{label}<span class="tiptext">{tooltip}</span></span>'
+
 RATIO_TOOLTIPS = {
-    "gross_margin":        "Gross Margin = (Revenue minus Cost of Goods Sold) divided by Revenue. Measures how much profit remains after direct production costs. Inconsistency across years suggests pricing problems, cost shocks, or manipulation.",
-    "revenue_receivables": "Compares how fast revenue grows vs how fast accounts receivable (money owed by customers) grows. If receivables grow faster, the business may be booking revenue it has not yet collected in cash.",
-    "cash_accrual":        "Compares net income (accounting profit) to operating cash flow (actual cash generated). A business can show profit on paper while running out of cash. This gap is a classic fraud and manipulation indicator.",
-    "owner_comp":          "The salary and benefits paid to the owner or officers. Below-market compensation inflates reported profit — the business looks more profitable than it really is because the owner is underpaying themselves.",
-    "ebitda_stability":    "EBITDA = Earnings Before Interest, Taxes, Depreciation and Amortization. It is the standard measure of business operating profit used in acquisitions. Large swings year-over-year suggest the earnings are not reliable.",
-    "dso":                 "Days Sales Outstanding = how many days on average it takes the business to collect payment from customers. High DSO means cash is tied up in unpaid invoices. Industry benchmark shown for comparison.",
-    "interest_coverage":   "EBITDA divided by interest expense. Measures whether the business generates enough profit to cover its debt payments. A ratio below 2.0x is considered dangerously thin for an acquisition financed with debt.",
+    "gross_margin":        "Gross Margin = (Revenue minus Cost of Goods Sold) / Revenue. Measures profit after direct production costs. Inconsistency across years suggests pricing problems, cost shocks, or manipulation.",
+    "revenue_receivables": "Compares revenue growth to accounts receivable (money owed by customers) growth. If receivables grow faster, the business may be booking revenue it has not yet collected in cash.",
+    "cash_accrual":        "Compares net income (accounting profit) to operating cash flow (actual cash generated). A business can show profit on paper while running out of cash — a classic manipulation indicator.",
+    "owner_comp":          "The salary paid to the owner or officers. Below-market compensation inflates reported profit — the business looks more profitable than it really is because the owner is underpaying themselves.",
+    "ebitda_stability":    "EBITDA = Earnings Before Interest, Taxes, Depreciation and Amortization. The standard acquisition profit measure. Large year-over-year swings suggest earnings are not reliable or repeatable.",
+    "dso":                 "Days Sales Outstanding = how many days it takes the business to collect payment from customers. High DSO means cash is tied up in unpaid invoices. Industry benchmark shown for comparison.",
+    "interest_coverage":   "EBITDA divided by interest expense. Measures whether the business generates enough profit to cover its debt payments. Below 2.0x is dangerously thin for a leveraged acquisition.",
 }
 
 TREND_TOOLTIPS = {
-    "Worsening": "This metric has moved in a negative direction over the period analyzed. The most recent year is worse than the earliest year.",
-    "Improving": "This metric has moved in a positive direction over the period analyzed. The most recent year is better than the earliest year.",
-    "Stable":    "This metric has remained relatively flat over the period analyzed. Change is less than 3% between earliest and most recent year.",
-}
-
-BADGES = {
-    "red":     '<span class="badge-red" title="HIGH RISK: This finding exceeds acceptable thresholds and requires investigation before proceeding with the acquisition.">🔴 HIGH RISK</span>',
-    "yellow":  '<span class="badge-yellow" title="CAUTION: This finding is outside the normal range but not extreme. Ask the seller for an explanation.">🟡 CAUTION</span>',
-    "green":   '<span class="badge-green" title="NORMAL: This finding is within the expected range for this industry. No immediate concern.">🟢 NORMAL</span>',
-    "unknown": '<span class="badge-unknown" title="INSUFFICIENT DATA: Not enough financial data was found to calculate this ratio reliably.">⚪ INSUFFICIENT DATA</span>',
-}
-
-FIELD_TOOLTIPS = {
-    "Transaction size": "The approximate annual revenue of the business you are acquiring. This affects benchmarking — a $400K revenue business has different norms than a $3M one.",
-    "Years in operation": "How long the business has been operating. A 3-year revenue decline in a 30-year-old business signals something different than the same decline in a 4-year-old one.",
-    "Financing structure": "How you plan to fund the acquisition. Bank financing makes interest coverage critical. All-cash buyers care less about debt service capacity.",
-    "Acquisition objective": "What you are primarily buying. Cash Flow = you want stable distributions. Growth = you want to scale. Asset Acquisition = you are buying the underlying assets more than the earnings.",
-}
-
-DOC_TYPES = {
-    "Formal Financial Statements": "Professionally prepared statements by an accountant or auditor. Highest reliability. May include a review or compilation report.",
-    "QuickBooks Export":           "Data exported directly from accounting software. Reliable for recent transactions but may lack proper accrual adjustments and balance sheet detail.",
-    "Excel / Other":               "Manually prepared spreadsheets or other formats. Variable reliability. Vérifi will assess data quality before running analysis.",
+    "Worsening": "This metric has moved in a negative direction. The most recent year is worse than the earliest year in the data.",
+    "Improving": "This metric has moved in a positive direction. The most recent year is better than the earliest year in the data.",
+    "Stable":    "This metric has remained relatively flat. Change is less than 3% between earliest and most recent year.",
 }
 
 RATIO_META = {
-    "gross_margin":        {"label": "Gross Margin Consistency",        "desc": lambda r: f"Margin ranged {r.get('min')}% to {r.get('max')}% — variance of {r.get('variance_pp')} pp." if r.get("available") else "Insufficient data."},
+    "gross_margin":        {"label": "Gross Margin Consistency",         "desc": lambda r: f"Margin ranged {r.get('min')}% to {r.get('max')}% — variance of {r.get('variance_pp')} pp." if r.get("available") else "Insufficient data."},
     "revenue_receivables": {"label": "Revenue vs. Receivables Divergence","desc": lambda r: f"Receivables grew {r.get('max_divergence_pp')} pp faster than revenue." if r.get("available") else "Insufficient data."},
-    "cash_accrual":        {"label": "Cash vs. Accrual Divergence",      "desc": lambda r: ("Net income positive while OCF negative in at least one year." if r.get("ni_positive_ocf_negative") else f"Max NI-OCF gap: {r.get('max_divergence_pct_rev')}% of revenue.") if r.get("available") else "Insufficient data."},
-    "owner_comp":          {"label": "Owner Compensation",               "desc": lambda r: f"Avg {r.get('avg_pct')}% of revenue — benchmark: {r.get('benchmark_range',('?','?'))[0]} to {r.get('benchmark_range',('?','?'))[1]}." if r.get("available") else "Insufficient data."},
-    "ebitda_stability":    {"label": "EBITDA Stability",                 "desc": lambda r: f"Largest YoY swing: {r.get('max_swing_pct')}%." if r.get("available") else "Insufficient data."},
-    "dso":                 {"label": "Days Sales Outstanding (DSO)",     "desc": lambda r: f"Latest DSO: {r.get('latest')} days — industry benchmark: {r.get('benchmark_range',('?','?'))[0]}–{r.get('benchmark_range',('?','?'))[1]} days." if r.get("available") else "Insufficient data."},
-    "interest_coverage":   {"label": "Interest Coverage",               "desc": lambda r: f"Latest coverage: {r.get('latest')}x EBITDA/interest — minimum acceptable: 2.0x." if r.get("available") else "Insufficient data."},
+    "cash_accrual":        {"label": "Cash vs. Accrual Divergence",       "desc": lambda r: ("Net income positive while OCF negative in at least one year." if r.get("ni_positive_ocf_negative") else f"Max NI-OCF gap: {r.get('max_divergence_pct_rev')}% of revenue.") if r.get("available") else "Insufficient data."},
+    "owner_comp":          {"label": "Owner Compensation",                "desc": lambda r: f"Avg {r.get('avg_pct')}% of revenue — benchmark: {r.get('benchmark_range',('?','?'))[0]} to {r.get('benchmark_range',('?','?'))[1]}." if r.get("available") else "Insufficient data."},
+    "ebitda_stability":    {"label": "EBITDA Stability",                  "desc": lambda r: f"Largest YoY swing: {r.get('max_swing_pct')}%." if r.get("available") else "Insufficient data."},
+    "dso":                 {"label": "Days Sales Outstanding (DSO)",      "desc": lambda r: f"Latest DSO: {r.get('latest')} days — industry benchmark: {r.get('benchmark_range',('?','?'))[0]}–{r.get('benchmark_range',('?','?'))[1]} days." if r.get("available") else "Insufficient data."},
+    "interest_coverage":   {"label": "Interest Coverage",                 "desc": lambda r: f"Latest coverage: {r.get('latest')}x EBITDA/interest — minimum acceptable: 2.0x." if r.get("available") else "Insufficient data."},
 }
+
+FIELD_TOOLTIPS = {
+    "Transaction size":      "The approximate annual revenue of the business you are acquiring. Affects benchmarking — a $400K revenue business has different norms than a $3M one.",
+    "Years in operation":    "How long the business has been operating. A 3-year decline in a 30-year-old business signals something different than the same decline in a 4-year-old one.",
+    "Financing structure":   "How you plan to fund the acquisition. Bank financing makes interest coverage critical. All-cash buyers care less about debt service capacity.",
+    "Acquisition objective": "What you are primarily buying. Cash Flow = stable distributions. Growth = you want to scale. Asset Acquisition = buying the underlying assets more than the earnings.",
+}
+
+DOC_TYPE_HELP = (
+    "Formal Financial Statements: professionally prepared by an accountant or auditor — highest reliability. "
+    "QuickBooks Export: reliable for transactions but may lack accrual adjustments. "
+    "Excel / Other: manually prepared — variable reliability, Vérifi will assess quality before analysis."
+)
 
 # ── Step 1: Onboarding ────────────────────────────────────────────────────────
 st.markdown('<div class="section-card">', unsafe_allow_html=True)
@@ -204,43 +262,42 @@ with col1:
 
     st.markdown("<br>", unsafe_allow_html=True)
     objective = st.radio(
-        "Acquisition objective ❓",
+        "Acquisition objective",
         ["Cash Flow", "Growth", "Asset Acquisition"],
         horizontal=True,
         help=FIELD_TOOLTIPS["Acquisition objective"],
     )
     transaction_size = st.radio(
-        "Transaction size (revenue) ❓",
+        "Transaction size (revenue)",
         ["Under $500K", "$500K–$2M", "$2M–$5M"],
         horizontal=True,
         help=FIELD_TOOLTIPS["Transaction size"],
     )
 
 with col2:
-    st.markdown("**Document type**")
-    for dt, desc in DOC_TYPES.items():
-        st.markdown(f'<div class="doc-type-card"><b>{dt}</b><br><span style="color:#666;">{desc}</span></div>', unsafe_allow_html=True)
-    doc_type = st.radio("Select document type", list(DOC_TYPES.keys()), label_visibility="collapsed")
-
+    doc_type = st.radio(
+        "Document type",
+        ["Formal Financial Statements", "QuickBooks Export", "Excel / Other"],
+        help=DOC_TYPE_HELP,
+    )
     years = st.radio("Years of data available", ["1 year", "2 years", "3 years"], horizontal=True, index=2)
     years_operating = st.radio(
-        "Years in operation ❓",
+        "Years in operation",
         ["Under 5 years", "5–15 years", "15+ years"],
         horizontal=True, index=1,
         help=FIELD_TOOLTIPS["Years in operation"],
     )
     financing = st.radio(
-        "Financing structure ❓",
+        "Financing structure",
         ["All Cash", "Bank Financing", "Seller Financing", "Mixed"],
         horizontal=True,
         help=FIELD_TOOLTIPS["Financing structure"],
     )
 
-# ── Buyer context box ─────────────────────────────────────────────────────────
-st.markdown("**What matters most to you in this acquisition?** *(optional but improves your report)*")
+st.markdown("**What matters most to you in this acquisition?** *(optional — improves your report)*")
 buyer_context = st.text_area(
-    "buyer_context",
-    placeholder="Example: I am concerned about key-person risk and whether the business can run without the current owner. I am also worried about the largest customer representing too much revenue.",
+    "buyer_context_input",
+    placeholder="Example: I am concerned about key-person risk and whether the business can run without the current owner. I am also worried about customer concentration.",
     height=90,
     label_visibility="collapsed",
 )
@@ -258,16 +315,16 @@ if analyze_clicked and uploaded_file:
         raw = extract_from_pdf(file_bytes) if ext == "pdf" else extract_from_excel(file_bytes)
 
     quality = assess_quality(raw, years)
-    st.session_state.quality        = quality
-    st.session_state.data           = raw
-    st.session_state.industry       = industry
-    st.session_state.objective      = objective
-    st.session_state.buyer_context  = buyer_context
-    st.session_state.transaction_size   = transaction_size
-    st.session_state.years_operating    = years_operating
-    st.session_state.financing          = financing
-    st.session_state.doc_type           = doc_type
-    st.session_state.years              = years
+    st.session_state.quality          = quality
+    st.session_state.data             = raw
+    st.session_state.industry         = industry
+    st.session_state.objective        = objective
+    st.session_state.buyer_context    = buyer_context
+    st.session_state.transaction_size = transaction_size
+    st.session_state.years_operating  = years_operating
+    st.session_state.financing        = financing
+    st.session_state.doc_type         = doc_type
+    st.session_state.years            = years
 
     core_count = sum([
         "revenue" in raw,
@@ -320,7 +377,8 @@ if st.session_state.quality:
     c2.metric("Balance Sheet",    "✅ Found" if q["has_balance"]     else "❌ Not found")
     c3.metric("Cash Flow Data",   "✅ Found" if q["has_cash_flow"]   else "❌ Not found")
 
-    all_keys = ["revenue","gross_profit","net_income","operating_cash_flow","accounts_receivable","owner_comp","ebitda","interest"]
+    all_keys = ["revenue","gross_profit","net_income","operating_cash_flow",
+                "accounts_receivable","owner_comp","ebitda","interest"]
     data = st.session_state.data or {}
     found_count = sum(1 for k in all_keys if k in data)
     total = len(all_keys)
@@ -334,13 +392,13 @@ if st.session_state.quality:
     if "operating_cash_flow" not in data: estimates.append("cash flow")
     if "owner_comp" not in data:          estimates.append("owner compensation")
 
-    reliable_str  = ", ".join(reliable_labels) if reliable_labels else "none"
+    reliable_str = ", ".join(reliable_labels) if reliable_labels else "none"
     confidence_text = (
         f"Analysis based on <b>{found_count} of {total}</b> key line items. "
         f"<b>Reliable findings:</b> {reliable_str}. "
         + (f"<b>Estimate only:</b> {', '.join(estimates)}." if estimates else "All findings are reliable.")
     )
-    st.markdown(f'<div class="confidence-box"> {confidence_text}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="confidence-box">📋 {confidence_text}</div>', unsafe_allow_html=True)
 
     score_color = {"Sufficient": "green", "Partial": "orange", "Insufficient": "red"}[q["score"]]
     st.markdown(f"**Overall data quality:** :{score_color}[{q['score']}]")
@@ -363,7 +421,7 @@ if st.session_state.ratios:
 
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
     st.subheader("Step 3 — Ratio Analysis")
-    st.caption(f"Findings ordered by priority for a **{objective}** acquisition in **{ind}**. Hover over any title or badge for definitions.")
+    st.caption(f"Findings ordered by priority for a **{objective}** acquisition in **{ind}**. Hover over any title, badge, or trend for definitions.")
 
     priority_order = bench["objective_priority"].get(objective, list(RATIO_META.keys()))
     implications   = OBJECTIVE_IMPLICATIONS.get(objective, {})
@@ -374,33 +432,38 @@ if st.session_state.ratios:
         meta    = RATIO_META[key]
         r       = ratios[key]
         sev     = r.get("severity", "unknown")
-        badge   = BADGES.get(sev, BADGES["unknown"])
         trend   = r.get("trend", "flat")
         tooltip = RATIO_TOOLTIPS.get(key, "")
         desc    = meta["desc"](r)
         implication = implications.get(key, "")
 
-        # Trend label
+        # Trend label + color
         if trend == "flat":
-            trend_label = "Stable"; trend_style = "color:#7d6608;"
+            trend_label = "Stable"
+            trend_style = "color:#7d6608;"
         elif key in ("dso", "revenue_receivables"):
-            trend_label = "⬆ Worsening" if trend == "up" else "⬇ Improving"
+            trend_label = "Worsening" if trend == "up" else "Improving"
             trend_style = "color:#922b21;" if trend == "up" else "color:#1a6b5a;"
         else:
-            trend_label = "⬆ Improving" if trend == "up" else "⬇ Worsening"
+            trend_label = "Improving" if trend == "up" else "Worsening"
             trend_style = "color:#1a6b5a;" if trend == "up" else "color:#922b21;"
 
-        trend_tip = TREND_TOOLTIPS.get(trend_label.replace("⬆ ","").replace("⬇ ",""), "")
+        arrow = "⬆" if trend == "up" else ("⬇" if trend == "down" else "→")
+        trend_tip = TREND_TOOLTIPS.get(trend_label, "")
+
+        ratio_tip_html  = tip(f'<b>{meta["label"]}</b>', tooltip)
+        badge           = badge_html(sev)
+        trend_tip_html  = f'<span class="trend-tag tip" style="{trend_style}">{arrow} {trend_label}<span class="tiptext">{trend_tip}</span></span>'
 
         st.markdown(f"""
         <div class="ratio-row">
             <div style="display:flex; align-items:center; gap:0.7rem; flex-wrap:wrap; margin-bottom:0.3rem;">
-                <span class="ratio-label" title="{tooltip}">{meta['label']} ℹ</span>
+                {ratio_tip_html}
                 {badge}
-                <span class="trend-tag" style="{trend_style}" title="{trend_tip}">{trend_label}</span>
+                {trend_tip_html}
             </div>
             <div style="color:#333; font-size:0.9rem;">{desc}</div>
-            {f'<div class="ratio-implication">→ For a {objective} buyer: {implication}</div>' if implication else ''}
+            {f'<div class="ratio-implication">For a {objective} buyer: {implication}</div>' if implication else ''}
         </div>
         """, unsafe_allow_html=True)
 
@@ -433,9 +496,10 @@ if st.session_state.report_text:
 
     st.markdown("""
     <div class="ai-disclaimer">
-         <b>Preliminary AI-Generated Report</b> — This report was produced automatically by Vérifi's AI analysis engine based on the financial data you submitted.
-        It has <b>not yet been reviewed by a licensed CPA</b>. Do not rely on it as a final due diligence opinion.
-        Your final report, including a CPA advisory memo, will be delivered within 48 hours of submission.
+        ⚠️ <b>Preliminary AI-Generated Report</b> — This report was produced automatically by Vérifi's AI
+        analysis engine based on the financial data you submitted. It has <b>not yet been reviewed by a
+        licensed CPA</b>. Do not rely on it as a final due diligence opinion. Your final report, including
+        a CPA advisory memo, will be delivered within 48 hours of submission.
     </div>
     """, unsafe_allow_html=True)
 
@@ -444,23 +508,20 @@ if st.session_state.report_text:
 
     st.markdown("""
     <div class="cpa-banner">
-        <h3>CPA Advisory Review — Next Step</h3>
-        <p>
-            Your AI-generated report has been submitted for review by a licensed Quebec CPA.
-            Within 48 hours, you will receive a <b>CPA advisory memo</b> contextualizing these findings
-            with professional judgment. This is an advisory consultation, not an audit or assurance engagement.
-            Your included 1-hour consultation will be scheduled upon CPA review completion.
-        </p>
+        <h3>📋 CPA Advisory Review — Next Step</h3>
+        <p>Your AI-generated report has been submitted for review by a licensed Quebec CPA.
+        Within 48 hours you will receive a <b>CPA advisory memo</b> contextualizing these findings
+        with professional judgment. This is an advisory consultation, not an audit or assurance engagement.</p>
     </div>
     """, unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    if st.button("Clieck here for your Schedule Included 1-Hour CPA Consultation", use_container_width=True):
+    if st.button("📅 Schedule Included 1-Hour CPA Consultation", use_container_width=True):
         st.info("Consultation scheduling coming soon. A CPA will contact you at your registered email within 24 hours.")
 
     st.download_button(
-        label="⬇Click here to Download Preliminary Report",
+        label="⬇️ Download Preliminary Report",
         data=st.session_state.report_text,
         file_name="verifi_preliminary_report.txt",
         mime="text/plain",
@@ -470,9 +531,8 @@ if st.session_state.report_text:
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="footer">
-    Note : Vérifi complies with Quebec Law 25 and applicable Canadian privacy legislation.
+    🔒 Vérifi complies with Quebec Law 25 and applicable Canadian privacy legislation.
     Financial data is transmitted securely to Anthropic's API for report generation and is not stored by Vérifi.
-    This platform does not provide legal, accounting, or investment advice.
-    © 2026 Vérifi — All rights reserved.
+    This platform does not provide legal, accounting, or investment advice. © 2026 Vérifi
 </div>
 """, unsafe_allow_html=True)
