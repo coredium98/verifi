@@ -37,7 +37,7 @@ def _fmt_ratio(name, result):
     return "\n".join(lines)
 
 def generate_report(industry, objective, doc_type, years, quality, ratios,
-                    transaction_size, years_operating, financing):
+                    transaction_size, years_operating, financing, buyer_context=""):
     bench = BENCHMARKS[industry]
     client = anthropic.Anthropic()
 
@@ -51,6 +51,8 @@ def generate_report(industry, objective, doc_type, years, quality, ratios,
         _fmt_ratio("Interest Coverage",        ratios["interest_coverage"]),
     ])
 
+    buyer_section = f"\nBUYER'S STATED PRIORITIES:\n{buyer_context}\nAddress these concerns explicitly in the Key Findings and Recommended Next Steps.\n" if buyer_context and buyer_context.strip() else ""
+
     prompt = f"""You are a financial due diligence analyst specializing in SME acquisitions in Quebec, Canada.
 
 TRANSACTION CONTEXT:
@@ -62,6 +64,7 @@ TRANSACTION CONTEXT:
 - Document type: {doc_type}
 - Years of data: {years}
 - Data quality: {quality}
+{buyer_section}
 
 INDUSTRY BENCHMARKS:
 - Normal gross margin: {bench['gross_margin_range'][0]*100:.0f}% to {bench['gross_margin_range'][1]*100:.0f}%
