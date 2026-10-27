@@ -1,10 +1,16 @@
-import anthropic
-from benchmarks import BENCHMARKS
+"""Anthropic Claude API prompt construction and due diligence report generation."""
 
-def _fmt_ratio(name, result):
+from __future__ import annotations
+
+from typing import Any
+
+from verifi.benchmarks import BENCHMARKS
+
+
+def _fmt_ratio(name: str, result: dict[str, Any]) -> str:
     if not result.get("available"):
         return f"{name}: Data not available"
-    s = result.get("severity", "unknown").upper()
+    s = str(result.get("severity", "unknown")).upper()
     lines = [f"{name}: [{s}]"]
     if name == "Gross Margin Consistency":
         lines.append(f"  Values by year: {result.get('values')}%")
@@ -17,7 +23,9 @@ def _fmt_ratio(name, result):
     elif name == "Cash vs Accrual":
         lines.append(f"  Net income by year: {result.get('ni_values')}")
         lines.append(f"  Operating cash flow by year: {result.get('ocf_values')}")
-        lines.append(f"  NI positive while OCF negative in any year: {result.get('ni_positive_ocf_negative')}")
+        lines.append(
+            f"  NI positive while OCF negative in any year: {result.get('ni_positive_ocf_negative')}"
+        )
     elif name == "Owner Compensation":
         lines.append(f"  Average: {result.get('avg_pct')}% of revenue")
         lines.append(f"  Industry benchmark: {result.get('benchmark_range')}")
@@ -36,24 +44,46 @@ def _fmt_ratio(name, result):
         lines.append(f"  Latest: {result.get('latest')}x (minimum acceptable: 2.0x)")
     return "\n".join(lines)
 
-def generate_report(industry, objective, doc_type, years, quality, ratios,
-                    transaction_size, years_operating, financing, buyer_context=""):
+
+def escape_markdown_dollars(text: str) -> str:
+    """Escape unescaped dollar signs so Streamlit Markdown does not trigger KaTeX math mode."""
+    return text.replace("\\$", "$").replace("$", "\\$")
+
+
+def build_prompt(
+    industry: str,
+    objective: str,
+    doc_type: str,
+    years: str,
+    quality: str,
+    ratios: dict[str, dict[str, Any]],
+    transaction_size: str,
+    years_operating: str,
+    financing: str,
+    buyer_context: str = "",
+) -> str:
+    """Build the structured due diligence prompt for Claude."""
     bench = BENCHMARKS[industry]
-    client = anthropic.Anthropic()
+    ratio_text = "\n\n".join(
+        [
+            _fmt_ratio("Gross Margin Consistency", ratios["gross_margin"]),
+            _fmt_ratio("Revenue vs Receivables", ratios["revenue_receivables"]),
+            _fmt_ratio("Cash vs Accrual", ratios["cash_accrual"]),
+            _fmt_ratio("Owner Compensation", ratios["owner_comp"]),
+            _fmt_ratio("EBITDA Stability", ratios["ebitda_stability"]),
+            _fmt_ratio("DSO", ratios["dso"]),
+            _fmt_ratio("Interest Coverage", ratios["interest_coverage"]),
+        ]
+    )
 
-    ratio_text = "\n\n".join([
-        _fmt_ratio("Gross Margin Consistency", ratios["gross_margin"]),
-        _fmt_ratio("Revenue vs Receivables",   ratios["revenue_receivables"]),
-        _fmt_ratio("Cash vs Accrual",          ratios["cash_accrual"]),
-        _fmt_ratio("Owner Compensation",       ratios["owner_comp"]),
-        _fmt_ratio("EBITDA Stability",         ratios["ebitda_stability"]),
-        _fmt_ratio("DSO",                      ratios["dso"]),
-        _fmt_ratio("Interest Coverage",        ratios["interest_coverage"]),
-    ])
+    buyer_section = (
+        f"\nBUYER'S STATED PRIORITIES:\n{buyer_context.strip()}\n"
+        "Address these concerns explicitly in the Key Findings and Recommended Next Steps.\n"
+        if buyer_context and buyer_context.strip()
+        else ""
+    )
 
-    buyer_section = f"\nBUYER'S STATED PRIORITIES:\n{buyer_context}\nAddress these concerns explicitly in the Key Findings and Recommended Next Steps.\n" if buyer_context and buyer_context.strip() else ""
-
-    prompt = f"""You are a financial due diligence analyst specializing in SME acquisitions in Quebec, Canada.
+    return f"""You are a financial due diligence analyst specializing in SME acquisitions in Quebec, Canada.
 
 TRANSACTION CONTEXT:
 - Industry: {industry}
@@ -65,7 +95,6 @@ TRANSACTION CONTEXT:
 - Years of data: {years}
 - Data quality: {quality}
 {buyer_section}
-
 INDUSTRY BENCHMARKS:
 - Normal gross margin: {bench['gross_margin_range'][0]*100:.0f}% to {bench['gross_margin_range'][1]*100:.0f}%
 - Normal DSO: {bench['DSO_range'][0]} to {bench['DSO_range'][1]} days
@@ -107,11 +136,39 @@ FORMATTING RULES:
 - The buyer objective is {objective} — findings most relevant to that goal come first.
 """
 
+
+def generate_report(
+    industry: str,
+    objective: str,
+    doc_type: str,
+    years: str,
+    quality: str,
+    ratios: dict[str, dict[str, Any]],
+    transaction_size: str,
+    years_operating: str,
+    financing: str,
+    buyer_context: str = "",
+) -> str:
+    """Call Anthropic Claude API to generate the structured due diligence report (raw Markdown)."""
+    import anthropic  # type: ignore[import-not-found]
+
+    prompt = build_prompt(
+        industry=industry,
+        objective=objective,
+        doc_type=doc_type,
+        years=years,
+        quality=quality,
+        ratios=ratios,
+        transaction_size=transaction_size,
+        years_operating=years_operating,
+        financing=financing,
+        buyer_context=buyer_context,
+    )
+
+    client = anthropic.Anthropic()
     message = client.messages.create(
         model="claude-opus-4-5",
         max_tokens=2000,
         messages=[{"role": "user", "content": prompt}],
     )
-    report_text = message.content[0].text
-    report_text = report_text.replace("$", "\\$")
-    return report_text
+    return message.content[0].text

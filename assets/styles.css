@@ -1,0 +1,121 @@
+:root {
+    --navy:   #1B365D;
+    --teal:   #20B2AA;
+    --grey:   #4A4A4A;
+    --white:  #FFFFFF;
+    --sage:   #E8F1F0;
+    --border: #D6E4F0;
+}
+.verifi-header {
+    background: linear-gradient(135deg, #1B365D 0%, #1e4d7b 60%, #20B2AA 100%);
+    padding: 1.6rem 2rem; border-radius: 12px;
+    margin-bottom: 1.5rem; color: white;
+    display: flex; align-items: center;
+    box-shadow: 0 4px 16px rgba(27,54,93,0.18);
+}
+.verifi-header-text h1 { color: white; margin: 0; font-size: 2rem; letter-spacing: -0.5px; }
+.verifi-header-text p  { color: rgba(255,255,255,0.75); margin: 0.2rem 0 0; font-size: 0.95rem; }
+div[data-testid="stVerticalBlockBorderWrapper"] {
+    background: var(--white);
+    border-radius: 10px !important;
+    padding: 1.2rem;
+    margin-bottom: 1.2rem;
+    border: 1px solid var(--border) !important;
+    box-shadow: 0 1px 4px rgba(27,54,93,0.07);
+}
+.industry-hint {
+    background: var(--sage); border-left: 4px solid var(--teal);
+    padding: 0.7rem 1rem; border-radius: 0 8px 8px 0;
+    font-size: 0.88rem; color: var(--navy); margin-top: 0.5rem;
+}
+.confidence-box {
+    background: var(--sage); border: 1px solid var(--teal);
+    border-radius: 8px; padding: 0.8rem 1rem; margin-top: 0.8rem;
+    font-size: 0.9rem; color: var(--navy);
+}
+.badge-red     { background:#fadbd8; color:#7b241c; padding:3px 12px; border-radius:20px; font-weight:700; font-size:0.8rem; display:inline-block; position:relative; }
+.badge-yellow  { background:#fef9e7; color:#7d6608; padding:3px 12px; border-radius:20px; font-weight:700; font-size:0.8rem; display:inline-block; position:relative; }
+.badge-green   { background:var(--sage); color:#1a6b5a; padding:3px 12px; border-radius:20px; font-weight:700; font-size:0.8rem; display:inline-block; position:relative; }
+.badge-unknown { background:#eaecee; color:#555; padding:3px 12px; border-radius:20px; font-weight:700; font-size:0.8rem; display:inline-block; position:relative; }
+.ratio-row { padding: 0.9rem 0; border-bottom: 1px solid #eef2f7; }
+.ratio-implication { font-size:0.83rem; color:#4A5568; font-style:italic; margin-top:0.25rem; }
+.trend-tag { font-size:0.78rem; font-weight:600; position:relative; display:inline-block; }
+.cpa-banner {
+    background: linear-gradient(135deg, #1B365D 0%, #20B2AA 100%);
+    border-radius: 10px; padding: 1.5rem 2rem; color: white; margin-top: 1rem;
+    box-shadow: 0 4px 16px rgba(27,54,93,0.18);
+}
+.cpa-banner h3 { color: white; margin: 0 0 0.5rem; }
+.cpa-banner p  { color: rgba(255,255,255,0.8); margin: 0; font-size: 0.95rem; }
+.ai-disclaimer {
+    background: #fef9e7; border: 1px solid #f39c12; border-radius: 8px;
+    padding: 0.9rem 1.2rem; margin-bottom: 1rem; font-size: 0.88rem; color: #7d6608;
+}
+.privacy-box {
+    background: #f0f4f8; border: 1px solid var(--border); border-radius: 8px;
+    padding: 0.8rem 1rem; font-size: 0.82rem; color: #4A4A4A; margin-top: 1rem;
+}
+.seasonal-warn {
+    background: #fef9e7; border-left: 4px solid #f39c12;
+    padding: 0.6rem 1rem; border-radius: 0 6px 6px 0;
+    font-size: 0.85rem; color: #7d6608; margin-top: 0.5rem;
+}
+.missing-flag {
+    background: #f8f9fa; border: 1px dashed #b0bec5;
+    border-radius: 8px; padding: 0.6rem 1rem;
+    font-size: 0.85rem; color: #555; margin-top: 0.4rem;
+}
+.footer {
+    text-align: center; font-size: 0.78rem; color: #999;
+    margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #eee;
+}
+div[data-testid="stButton"] button[kind="primary"] {
+    background-color: var(--teal) !important;
+    border-color: var(--teal) !important;
+    color: white !important;
+}
+div[data-testid="stButton"] button[kind="primary"]:hover {
+    background-color: #189e97 !important;
+}
+
+/* ── Custom navy CSS tooltips ─────────────────────────────────── */
+.tip {
+    position: relative;
+    display: inline-block;
+    cursor: help;
+    border-bottom: 1px dashed #999;
+}
+.tip .tiptext {
+    visibility: hidden;
+    opacity: 0;
+    background-color: #1B365D;
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 400;
+    line-height: 1.5;
+    text-align: left;
+    border-radius: 6px;
+    padding: 8px 12px;
+    width: 280px;
+    position: absolute;
+    z-index: 9999;
+    bottom: 130%;
+    left: 50%;
+    transform: translateX(-50%);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    transition: opacity 0.2s;
+    pointer-events: none;
+}
+.tip .tiptext::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: #1B365D;
+}
+.tip:hover .tiptext {
+    visibility: visible;
+    opacity: 1;
+}
