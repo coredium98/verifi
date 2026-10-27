@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [
-    { name = "Zacharie Houle, CPA" }
+    { name = "Zacharie Houle, CPA auditeur" }
 ]
 dependencies = [
     "streamlit>=1.40.0,<2.0.0",

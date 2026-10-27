@@ -83,4 +83,4 @@ pytest -v
 
 ## Author
 
-Built by **Zacharie Houle, CPA**. Licensed under the [MIT License](LICENSE).
+Built by **Zacharie Houle, CPA auditeur**. Licensed under the [MIT License](LICENSE).
